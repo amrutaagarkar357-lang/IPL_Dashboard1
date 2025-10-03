@@ -1,0 +1,6 @@
+match_id,batting_team,batsman,bowler,total_runs,is_wicket
+1,Chennai Super Kings,MS Dhoni,JA Morkel,2,0
+1,Chennai Super Kings,Suresh Raina,JA Morkel,4,0
+1,Chennai Super Kings,MS Dhoni,JA Morkel,6,1
+2,Mumbai Indians,Rohit Sharma,Bhuvneshwar Kumar,1,0
+2,Mumbai Indians,Surya Kumar Yadav,Bhuvneshwar Kumar,0,1
