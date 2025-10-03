@@ -8,9 +8,7 @@ import plotly.express as px
 @st.cache_data
 def load_data():
     matches = pd.read_csv("https://raw.githubusercontent.com/<username>/<repo>/main/matches.csv")
-deliveries = pd.read_csv("https://raw.githubusercontent.com/<username>/<repo>/main/deliveries.csv")
-
-    
+    deliveries = pd.read_csv("https://raw.githubusercontent.com/<username>/<repo>/main/deliveries.csv")
     return matches, deliveries
 
 matches, deliveries = load_data()
@@ -19,7 +17,7 @@ matches, deliveries = load_data()
 # Sidebar Filters
 # -------------------
 st.sidebar.header("Filters")
-teams = matches["team1"].unique()
+teams = matches["team1"].dropna().unique()   # dropna in case of blanks
 selected_team = st.sidebar.selectbox("Select Team", sorted(teams))
 
 # -------------------
@@ -27,13 +25,15 @@ selected_team = st.sidebar.selectbox("Select Team", sorted(teams))
 # -------------------
 st.header("Runs Distribution")
 
-# Filter deliveries by selected team
 team_deliveries = deliveries[deliveries["batting_team"] == selected_team]
 
-# Total runs by batsman
-total_runs = team_deliveries.groupby("batsman")["batsman_runs"].sum().sort_values(ascending=False).head(10)
+total_runs = (
+    team_deliveries.groupby("batsman")["batsman_runs"]
+    .sum()
+    .sort_values(ascending=False)
+    .head(10)
+)
 
-# Convert to DataFrame (fix for your error at line 51)
 df_runs = pd.DataFrame({
     "Batsman": total_runs.index,
     "Total Runs": total_runs.values
@@ -55,7 +55,13 @@ st.plotly_chart(fig)
 st.header("Top Bowlers")
 
 team_bowling = deliveries[deliveries["bowling_team"] == selected_team]
-total_wkts = team_bowling[team_bowling["is_wicket"] == 1].groupby("bowler")["is_wicket"].count().sort_values(ascending=False).head(10)
+total_wkts = (
+    team_bowling[team_bowling["is_wicket"] == 1]
+    .groupby("bowler")["is_wicket"]
+    .count()
+    .sort_values(ascending=False)
+    .head(10)
+)
 
 df_wkts = pd.DataFrame({
     "Bowler": total_wkts.index,
@@ -78,7 +84,7 @@ st.plotly_chart(fig2)
 # -------------------
 st.header("Winning Trends")
 
-team_matches = matches[(matches["winner"] == selected_team)]
+team_matches = matches[matches["winner"] == selected_team]
 wins_per_season = team_matches.groupby("season")["id"].count()
 
 df_wins = pd.DataFrame({
@@ -100,7 +106,12 @@ st.plotly_chart(fig3)
 # -------------------
 st.header("Stadium Trends")
 
-venue_wins = team_matches.groupby("venue")["id"].count().sort_values(ascending=False).head(10)
+venue_wins = (
+    team_matches.groupby("venue")["id"]
+    .count()
+    .sort_values(ascending=False)
+    .head(10)
+)
 
 df_venue = pd.DataFrame({
     "Stadium": venue_wins.index,
