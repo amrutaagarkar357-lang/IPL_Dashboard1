@@ -7,8 +7,10 @@ import plotly.express as px
 # -------------------
 @st.cache_data
 def load_data():
-    matches = pd.read_csv("matches.csv")
-    deliveries = pd.read_csv("deliveries.csv")
+    matches = pd.read_csv("https://raw.githubusercontent.com/<username>/<repo>/main/matches.csv")
+deliveries = pd.read_csv("https://raw.githubusercontent.com/<username>/<repo>/main/deliveries.csv")
+
+    
     return matches, deliveries
 
 matches, deliveries = load_data()
