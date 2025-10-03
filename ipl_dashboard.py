@@ -2,71 +2,118 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# ---------------------
-# 1. Page Config
-# ---------------------
-st.set_page_config(page_title="IPL Dashboard", layout="wide")
+# -------------------
+# Load Data
+# -------------------
+@st.cache_data
+def load_data():
+    matches = pd.read_csv("matches.csv")
+    deliveries = pd.read_csv("deliveries.csv")
+    return matches, deliveries
 
-st.markdown("<h1 style='text-align: center; color: #133D8D;'>🏏 IPL Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align: center; color: #D71920;'>Official Style Dashboard (with Kaggle Data)</h4>", unsafe_allow_html=True)
+matches, deliveries = load_data()
 
-# ---------------------
-# 2. Load Data
-# ---------------------
-matches = pd.read_csv("matches.csv")
-deliveries = pd.read_csv("deliveries.csv")
+# -------------------
+# Sidebar Filters
+# -------------------
+st.sidebar.header("Filters")
+teams = matches["team1"].unique()
+selected_team = st.sidebar.selectbox("Select Team", sorted(teams))
 
-# ---------------------
-# 3. Sidebar Filters
-# ---------------------
-st.sidebar.header("🔍 Filters")
-season = st.sidebar.selectbox("Select Season", sorted(matches['season'].unique()))
-season_matches = matches[matches['season'] == season]
+# -------------------
+# Runs Distribution
+# -------------------
+st.header("Runs Distribution")
 
-# ---------------------
-# 4. KPIs
-# ---------------------
-total_matches = season_matches.shape[0]
-most_wins = season_matches['winner'].value_counts().idxmax()
-top_stadium = season_matches['venue'].value_counts().idxmax()
+# Filter deliveries by selected team
+team_deliveries = deliveries[deliveries["batting_team"] == selected_team]
 
-col1, col2, col3 = st.columns(3)
-col1.metric("🏆 Total Matches", total_matches)
-col2.metric("🥇 Most Winning Team", most_wins)
-col3.metric("🏟 Top Stadium", top_stadium)
+# Total runs by batsman
+total_runs = team_deliveries.groupby("batsman")["batsman_runs"].sum().sort_values(ascending=False).head(10)
 
-# ---------------------
-# 5. Top Scorers
-# ---------------------
-season_ids = season_matches['id'].unique()
-season_deliveries = deliveries[deliveries['match_id'].isin(season_ids)]
+# Convert to DataFrame (fix for your error at line 51)
+df_runs = pd.DataFrame({
+    "Batsman": total_runs.index,
+    "Total Runs": total_runs.values
+})
 
-top_scorers = season_deliveries.groupby('batsman')['batsman_runs'].sum().sort_values(ascending=False).head(10)
-fig1 = px.bar(top_scorers, x=top_scorers.values, y=top_scorers.index,
-              orientation='h', title=f"Top 10 Scorers in {season}",
-              labels={"x": "Runs", "y": "Batsman"},
-              color=top_scorers.values, color_continuous_scale="blues")
+fig = px.bar(
+    df_runs,
+    x="Batsman",
+    y="Total Runs",
+    title=f"Top 10 Batsmen Runs for {selected_team}",
+    text="Total Runs"
+)
+fig.update_traces(textposition="outside")
+st.plotly_chart(fig)
 
-# ---------------------
-# 6. Stadium Trends
-# ---------------------
-stadium_wins = season_matches['venue'].value_counts().head(10)
-fig2 = px.bar(stadium_wins, x=stadium_wins.values, y=stadium_wins.index,
-              orientation='h', title=f"Top Stadiums in {season}",
-              labels={"x": "Matches", "y": "Stadium"},
-              color=stadium_wins.values, color_continuous_scale="reds")
+# -------------------
+# Top Bowlers
+# -------------------
+st.header("Top Bowlers")
 
-# ---------------------
-# 7. Winning Teams Chart
-# ---------------------
-winning_teams = season_matches['winner'].value_counts()
-fig3 = px.pie(winning_teams, names=winning_teams.index, values=winning_teams.values,
-              title=f"Winning Teams Share in {season}",
-              color_discrete_sequence=px.colors.qualitative.Safe)
+team_bowling = deliveries[deliveries["bowling_team"] == selected_team]
+total_wkts = team_bowling[team_bowling["is_wicket"] == 1].groupby("bowler")["is_wicket"].count().sort_values(ascending=False).head(10)
 
-# ---------------------
-# 8. Layout
-# ---------------------
-st.plotly_chart(fig1, use_container_width=True)
-st.plotly_chart(fig2, use_container_width=True)
-st.plotly_chart(fig3, use_container_width=True)
+df_wkts = pd.DataFrame({
+    "Bowler": total_wkts.index,
+    "Wickets": total_wkts.values
+})
+
+fig2 = px.bar(
+    df_wkts,
+    x="Bowler",
+    y="Wickets",
+    title=f"Top 10 Bowlers for {selected_team}",
+    text="Wickets",
+    color="Wickets"
+)
+fig2.update_traces(textposition="outside")
+st.plotly_chart(fig2)
+
+# -------------------
+# Match Winning Trends
+# -------------------
+st.header("Winning Trends")
+
+team_matches = matches[(matches["winner"] == selected_team)]
+wins_per_season = team_matches.groupby("season")["id"].count()
+
+df_wins = pd.DataFrame({
+    "Season": wins_per_season.index,
+    "Wins": wins_per_season.values
+})
+
+fig3 = px.line(
+    df_wins,
+    x="Season",
+    y="Wins",
+    title=f"Winning Trend per Season - {selected_team}",
+    markers=True
+)
+st.plotly_chart(fig3)
+
+# -------------------
+# Stadium Trends
+# -------------------
+st.header("Stadium Trends")
+
+venue_wins = team_matches.groupby("venue")["id"].count().sort_values(ascending=False).head(10)
+
+df_venue = pd.DataFrame({
+    "Stadium": venue_wins.index,
+    "Wins": venue_wins.values
+})
+
+fig4 = px.bar(
+    df_venue,
+    x="Stadium",
+    y="Wins",
+    title=f"Top Stadiums where {selected_team} Won",
+    text="Wins",
+    color="Wins"
+)
+fig4.update_traces(textposition="outside")
+st.plotly_chart(fig4)
+
+st.success("Dashboard Loaded Successfully ✅")
