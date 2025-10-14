@@ -78,3 +78,15 @@ fig1 = px.bar(team_wins, x='Team', y='Wins', color='Team', text='Wins',
               title='Top 5 Teams by Wins')
 fig1.update_traces(textposition='outside')
 st.plotly_chart(fig1, use_container_width=True)
+
+
+# ---------------------------
+# 2️⃣ Top 5 Batsmen by Total Runs
+# ---------------------------
+st.subheader("🏏 Top 5 Batsmen by Total Runs")
+top_batsmen = deliveries.groupby('batsman')['batsman_runs'].sum().reset_index()
+top_batsmen = top_batsmen.sort_values(by='batsman_runs', ascending=False).head(5)
+fig2 = px.bar(top_batsmen, x='batsman', y='batsman_runs', color='batsman', text='batsman_runs',
+              title='Top 5 Batsmen by Runs')
+fig2.update_traces(textposition='outside')
+st.plotly_chart(fig2, use_container_width=True)
