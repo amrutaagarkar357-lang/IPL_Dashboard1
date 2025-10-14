@@ -69,3 +69,12 @@ fig3 = px.bar(
 fig3.update_traces(textposition='outside')
 st.plotly_chart(fig3, use_container_width=True)
 
+# 1️⃣ Top 5 Teams by Wins
+# ---------------------------
+st.subheader("🥇 Top 5 Teams by Wins")
+team_wins = matches['winner'].dropna().value_counts().reset_index().head(5)
+team_wins.columns = ['Team', 'Wins']
+fig1 = px.bar(team_wins, x='Team', y='Wins', color='Team', text='Wins',
+              title='Top 5 Teams by Wins')
+fig1.update_traces(textposition='outside')
+st.plotly_chart(fig1, use_container_width=True)
