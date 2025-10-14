@@ -16,8 +16,7 @@ st.set_page_config(page_title="IPL Dashboard (Matplotlib)", layout="wide")
 
 
 # --- Step 2: File paths ---
-MATCHES_PATH = BASE_DIR / "data" / "matches.csv"
-DELIVERIES_PATH = BASE_DIR / "data" / "deliveries.csv"
+
 
 # --- Step 3: Load dataset ---
 @st.cache_data
