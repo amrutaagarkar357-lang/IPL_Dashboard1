@@ -1,83 +1,124 @@
-IPL_Streamlit_Dashboard.py
+# IPL_Streamlit_Dashboard.py
+# Streamlit dashboard for IPL analysis using Kaggle 'matches.csv' and 'deliveries.csv'
+# Uses only Matplotlib for visualizations.
 
-Streamlit dashboard for IPL analysis using Kaggle 'matches.csv' and 'deliveries.csv'
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+from pathlib import Path
 
-Place matches.csv and deliveries.csv in a folder named 'data' next to this file.
+st.set_page_config(page_title='IPL Dashboard (Matplotlib)', layout='wide', initial_sidebar_state='expanded')
 
-import streamlit as st import pandas as pd import plotly.express as px import plotly.graph_objects as go from pathlib import Path
+DATA_DIR = Path('./data')
+MATCHES_PATH = DATA_DIR / 'matches.csv'
+DELIVERIES_PATH = DATA_DIR / 'deliveries.csv'
 
-st.set_page_config(page_title='IPL Dashboard', layout='wide', initial_sidebar_state='expanded')
+@st.cache_data
+def load_data():
+    matches = pd.read_csv(MATCHES_PATH)
+    deliveries = pd.read_csv(DELIVERIES_PATH)
+    return matches, deliveries
 
-DATA_DIR = Path('./data') MATCHES_PATH = DATA_DIR / 'matches.csv' DELIVERIES_PATH = DATA_DIR / 'deliveries.csv'
+# Load data safely
+try:
+    matches, deliveries = load_data()
+except Exception as e:
+    st.error(f"Error loading dataset: {e}. Make sure matches.csv and deliveries.csv exist in './data' folder.")
+    st.stop()
 
-@st.cache_data def load_data(): matches = pd.read_csv(MATCHES_PATH) deliveries = pd.read_csv(DELIVERIES_PATH) return matches, deliveries
+# Sidebar filters
+st.sidebar.header("Filters")
+seasons = sorted(matches['season'].dropna().unique())
+selected_seasons = st.sidebar.multiselect("Select Season(s)", seasons, default=seasons[-3:])
+teams = sorted(pd.unique(matches[['team1', 'team2']].values.ravel('K')))
+selected_team = st.sidebar.selectbox("Select Team (or All)", ["All"] + teams)
 
-Load
+# Filter data
+f_matches = matches[matches['season'].isin(selected_seasons)]
+match_ids = f_matches['id'].unique()
+f_deliveries = deliveries[deliveries['match_id'].isin(match_ids)]
 
-try: matches, deliveries = load_data() except Exception as e: st.error(f"Could not load data from {DATA_DIR}. Make sure 'matches.csv' and 'deliveries.csv' exist.\nError: {e}") st.stop()
+if selected_team != "All":
+    f_matches = f_matches[(f_matches['team1'] == selected_team) | (f_matches['team2'] == selected_team)]
+    match_ids = f_matches['id'].unique()
+    f_deliveries = f_deliveries[f_deliveries['match_id'].isin(match_ids)]
 
-Sidebar filters
+# KPIs
+total_matches = f_matches.shape[0]
+total_runs = f_deliveries['total_runs'].sum()
+total_wickets = f_deliveries[f_deliveries['dismissal_kind'].notna()].shape[0]
+unique_players = pd.unique(pd.concat([f_deliveries['batsman'], f_deliveries['bowler']])).size
 
-st.sidebar.title('Filters') seasons = sorted(matches['season'].dropna().unique()) selected_seasons = st.sidebar.multiselect('Season(s)', seasons, default=seasons[-3:]) teams = sorted(pd.unique(matches[['team1','team2']].values.ravel('K'))) selected_team = st.sidebar.selectbox('Team (All for overall)', ['All'] + teams)
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Matches", total_matches)
+col2.metric("Total Runs", int(total_runs))
+col3.metric("Total Wickets", int(total_wickets))
+col4.metric("Unique Players", int(unique_players))
 
-Filtered datasets
+st.markdown("---")
 
-f_matches = matches[matches['season'].isin(selected_seasons)] match_ids = f_matches['id'].unique() f_deliveries = deliveries[deliveries['match_id'].isin(match_ids)]
+# 1️⃣ Matches per Season
+st.subheader("Matches per Season")
+matches_per_season = matches[matches['season'].isin(selected_seasons)].groupby('season').size()
+fig1, ax1 = plt.subplots()
+ax1.bar(matches_per_season.index, matches_per_season.values)
+ax1.set_xlabel("Season")
+ax1.set_ylabel("Matches")
+ax1.set_title("Matches per Season (Filtered)")
+st.pyplot(fig1)
 
-if selected_team != 'All': f_matches = f_matches[(f_matches['team1']==selected_team) | (f_matches['team2']==selected_team)] match_ids = f_matches['id'].unique() f_deliveries = deliveries[deliveries['match_id'].isin(match_ids)]
+# 2️⃣ Runs per Over
+st.subheader("Runs per Over")
+runs_per_over = f_deliveries.groupby('over')['total_runs'].sum()
+fig2, ax2 = plt.subplots()
+ax2.plot(runs_per_over.index, runs_per_over.values, marker='o')
+ax2.set_xlabel("Over")
+ax2.set_ylabel("Runs")
+ax2.set_title("Runs by Over (Filtered)")
+st.pyplot(fig2)
 
-KPIs
+# 3️⃣ Top Batsmen
+st.subheader("Top 10 Batsmen (by Runs)")
+batsman_runs = f_deliveries.groupby('batsman')['batsman_runs'].sum().sort_values(ascending=False).head(10)
+fig3, ax3 = plt.subplots()
+ax3.barh(batsman_runs.index[::-1], batsman_runs.values[::-1], color='skyblue')
+ax3.set_xlabel("Runs")
+ax3.set_ylabel("Batsman")
+ax3.set_title("Top 10 Batsmen")
+st.pyplot(fig3)
 
-total_matches = f_matches.shape[0] total_runs = f_deliveries['total_runs'].sum() total_wickets = f_deliveries[f_deliveries['dismissal_kind'].notna()].shape[0] unique_players = pd.unique(pd.concat([f_deliveries['batsman'], f_deliveries['bowler']])).size
+# 4️⃣ Top Bowlers
+st.subheader("Top 10 Bowlers (by Wickets)")
+wickets = f_deliveries[f_deliveries['dismissal_kind'].notna()]
+wickets = wickets[~wickets['dismissal_kind'].isin(['run out', 'retired hurt'])]
+bowler_wickets = wickets.groupby('bowler').size().sort_values(ascending=False).head(10)
+fig4, ax4 = plt.subplots()
+ax4.barh(bowler_wickets.index[::-1], bowler_wickets.values[::-1], color='orange')
+ax4.set_xlabel("Wickets")
+ax4.set_ylabel("Bowler")
+ax4.set_title("Top 10 Bowlers")
+st.pyplot(fig4)
 
-col1, col2, col3, col4 = st.columns(4) col1.metric('Matches', total_matches) col2.metric('Runs (filtered)', int(total_runs)) col3.metric('Wickets (filtered)', int(total_wickets)) col4.metric('Unique players', int(unique_players))
+# 5️⃣ Team Wins
+st.subheader("Team Wins")
+team_wins = f_matches.groupby('winner').size().sort_values(ascending=False)
+fig5, ax5 = plt.subplots()
+ax5.bar(team_wins.index, team_wins.values, color='green')
+ax5.set_xlabel("Team")
+ax5.set_ylabel("Wins")
+ax5.set_title("Wins by Team (Filtered)")
+plt.xticks(rotation=90)
+st.pyplot(fig5)
 
-st.markdown('---')
+# 6️⃣ Venue Scoring
+st.subheader("Top 10 Venues by Total Runs")
+venue_runs = f_deliveries.groupby('venue')['total_runs'].sum().sort_values(ascending=False).head(10)
+fig6, ax6 = plt.subplots()
+ax6.barh(venue_runs.index[::-1], venue_runs.values[::-1], color='purple')
+ax6.set_xlabel("Total Runs")
+ax6.set_ylabel("Venue")
+ax6.set_title("Top 10 Venues by Aggregate Runs")
+st.pyplot(fig6)
 
-Matches per Season
-
-matches_per_season = matches[matches['season'].isin(selected_seasons)].groupby('season').size().reset_index(name='matches') fig_mps = px.bar(matches_per_season, x='season', y='matches', title='Matches per Season (selected)') st.plotly_chart(fig_mps, use_container_width=True)
-
-Runs per Over (aggregated)
-
-runs_per_over = f_deliveries.groupby('over')['total_runs'].sum().reset_index() fig_over = px.line(runs_per_over, x='over', y='total_runs', markers=True, title='Runs by Over (filtered)') st.plotly_chart(fig_over, use_container_width=True)
-
-Top batsmen and bowlers
-
-st.header('Top Performers') with st.expander('Top batsmen (by runs)'): batsman_runs = f_deliveries.groupby('batsman')['batsman_runs'].sum().reset_index().sort_values('batsman_runs', ascending=False).head(15) st.table(batsman_runs.rename(columns={'batsman':'Player','batsman_runs':'Runs'}).reset_index(drop=True))
-
-with st.expander('Top bowlers (by wickets)'): # dismissals: count non-null dismissal_kind except 'run out' if you prefer wickets = f_deliveries[f_deliveries['dismissal_kind'].notna()] wickets = wickets[~wickets['dismissal_kind'].isin(['run out','retired hurt'])] bowler_wickets = wickets.groupby('bowler').size().reset_index(name='Wickets').sort_values('Wickets', ascending=False).head(15) st.table(bowler_wickets.rename(columns={'bowler':'Player'}).reset_index(drop=True))
-
-st.markdown('---')
-
-Team wins
-
-st.header('Team Wins') team_wins = f_matches.groupby('winner').size().reset_index(name='wins').sort_values('wins', ascending=False) fig_wins = px.bar(team_wins, x='winner', y='wins', title='Wins by Team (filtered)') st.plotly_chart(fig_wins, use_container_width=True)
-
-Venue analysis
-
-st.header('Venue & Scoring') venue_runs = f_deliveries.groupby('venue')['total_runs'].sum().reset_index().sort_values('total_runs', ascending=False).head(20) fig_venue = px.bar(venue_runs, x='venue', y='total_runs', title='Top venues by aggregate runs') st.plotly_chart(fig_venue, use_container_width=True)
-
-Head-to-head
-
-st.header('Head-to-head') if selected_team == 'All': st.info('Select a team from the sidebar to see head-to-head summaries.') else: opponents = [t for t in teams if t != selected_team] opp = st.selectbox('Opponent', ['All'] + opponents) if opp == 'All': hh = f_matches.copy() else: hh = f_matches[((f_matches['team1']==selected_team)&(f_matches['team2']==opp))|((f_matches['team2']==selected_team)&(f_matches['team1']==opp))] hh_summary = hh.groupby('winner').size().reset_index(name='wins').sort_values('wins', ascending=False) st.table(hh_summary)
-
-st.markdown('---')
-
-Time series: runs per season
-
-st.header('Season-wise runs') runs_season = deliveries[deliveries['match_id'].isin(matches[matches['season'].isin(selected_seasons)]['id'])].groupby(matches.set_index('id').loc[lambda df: df['season'].isin(selected_seasons)]['season'].values).sum(numeric_only=True)
-
-simpler approach:
-
-runs_season = pd.merge(deliveries, matches[['id','season']], left_on='match_id', right_on='id') runs_season = runs_season[runs_season['season'].isin(selected_seasons)].groupby('season')['total_runs'].sum().reset_index() fig_rs = px.line(runs_season, x='season', y='total_runs', markers=True, title='Total Runs by Season') st.plotly_chart(fig_rs, use_container_width=True)
-
-st.markdown('---')
-
-Download cleaned sample
-
-st.header('Download sample data') if st.button('Download filtered deliveries (CSV)'): st.download_button('Click to download', data=f_deliveries.to_csv(index=False), file_name='filtered_deliveries.csv', mime='text/csv')
-
-st.caption('Dashboard built with Streamlit • Data source: Kaggle IPL datasets (matches.csv, deliveries.csv)')
-
-End of file
+st.markdown("---")
+st.caption("Dashboard built with Streamlit + Matplotlib | Data source: Kaggle IPL Dataset (matches.csv & deliveries.csv)")
