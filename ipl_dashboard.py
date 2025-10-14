@@ -13,9 +13,7 @@ st.set_page_config(page_title="IPL Dashboard (Matplotlib)", layout="wide")
 
 # --- Step 1: Create folders automatically ---
 
-folders = [BASE_DIR / "data", BASE_DIR / "outputs/plots"]
-for folder in folders:
-    os.makedirs(folder, exist_ok=True)
+
 
 # --- Step 2: File paths ---
 MATCHES_PATH = BASE_DIR / "data" / "matches.csv"
