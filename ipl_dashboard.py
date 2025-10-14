@@ -17,8 +17,10 @@ def load_data(matches_path="matches.csv", deliveries_path="deliveries.csv"):
     if not os.path.exists(matches_path) or not os.path.exists(deliveries_path):
         st.error("⚠️ Please add both 'matches.csv' and 'deliveries.csv' in this folder.")
         st.stop()
-    matches = pd.read_csv(matches_path)
-    deliveries = pd.read_csv(deliveries_path)
+   import os
+print("matches.csv exists:", os.path.exists("matches.csv"))
+print("deliveries.csv exists:", os.path.exists("deliveries.csv"))
+
     return matches, deliveries
 
 matches, deliveries = load_data()
