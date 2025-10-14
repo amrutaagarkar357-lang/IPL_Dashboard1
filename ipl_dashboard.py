@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import plotly.express as px
 
-# Try to import streamlit safely
+# Try to import streamlit 
 try:
     import streamlit as st
 except ModuleNotFoundError:
@@ -19,9 +19,9 @@ def load_data(path="matches.csv"):
     return pd.read_csv(path)
 
 
-st.set_page_config(page_title="Easy IPL Dashboard", layout="wide")
-st.title("🏏 Easy IPL Dashboard (Plotly Version)")
-
+st.set_page_config(page_title="IPL Dashboard", layout="wide")
+st.title("🏏 IPL Data Analysis Dashboard ")
+ 
 # Load dataset
 matches = load_data()
 
