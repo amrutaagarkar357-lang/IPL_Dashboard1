@@ -31,7 +31,7 @@ def load_data(path="matches.csv"):
 
 
 st.set_page_config(page_title="Easy IPL Dashboard", layout="wide")
-st.title("🏏 Easy IPL Dashboard (Plotly Version)")
+st.title("🏏IPL Dashboard ")
 
 # Load dataset
 matches = load_data()
@@ -58,4 +58,4 @@ fig3 = px.bar(venue_counts, x='Venue', y='Matches', color='Venue', title='Top 10
 st.plotly_chart(fig3, use_container_width=True)
 
 st.markdown('---')
-st.info("✅ Libraries used: pandas, plotly, streamlit\n\n💡 To install dependencies: `pip install streamlit pandas plotly`")
+
